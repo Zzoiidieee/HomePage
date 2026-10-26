@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoid On Top</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --fg: #f6f6f6;
+      --muted: rgba(255,255,255,.55);
+      --faint: rgba(255,255,255,.32);
+      --line: rgba(255,255,255,.12);
+      --line-strong: rgba(255,255,255,.34);
+      --glass: rgba(255,255,255,.045);
+      --ease: cubic-bezier(.22,1,.36,1);
+      --r: 22px;
+      --nav-h: 76px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--fg);
+      background: #050505;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -3;
+      background:
+        radial-gradient(60% 50% at 20% 15%, rgba(120,128,140,.28), transparent 70%),
+        radial-gradient(50% 45% at 85% 80%, rgba(90,98,108,.22), transparent 70%),
+        #0a0a0b;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: -2;
+      background:
+        radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.09), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.72) 45%, rgba(0,0,0,.92) 100%);
+    }
+
+    .grain {
+      position: fixed; inset: -100%; z-index: 1; pointer-events: none; opacity: .05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+      animation: grain 9s steps(8) infinite;
+    }
+    @keyframes grain {
+      0% { transform: translate(0,0); } 12% { transform: translate(-3%,-4%); }
+      25% { transform: translate(-7%,3%); } 37% { transform: translate(4%,-6%); }
+      50% { transform: translate(-4%,6%); } 62% { transform: translate(6%,2%); }
+      75% { transform: translate(-6%,-3%); } 87% { transform: translate(3%,5%); }
+      100% { transform: translate(0,0); }
+    }
+
+    ::selection { background: #fff; color: #000; }
+    ::-webkit-scrollbar { width: 9px; height: 9px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.35); }
+
+    .nav {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      width: min(1200px, calc(100% - 28px));
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
+      padding: 13px 26px;
+      background: rgba(8,8,8,.5);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      z-index: 100;
+      transition: background .45s var(--ease), border-color .45s var(--ease), padding .45s var(--ease), box-shadow .45s var(--ease);
+    }
+    .nav.is-scrolled {
+      background: rgba(4,4,4,.86);
+      border-color: rgba(255,255,255,.22);
+      padding: 9px 26px;
+      box-shadow: 0 18px 50px -22px rgba(0,0,0,.95);
+    }
+
+    .brand {
+      font-family: 'Orbitron', sans-serif; font-weight: 800;
+      font-size: 1.15rem; letter-spacing: .28em;
+      color: #fff; text-decoration: none;
+    }
+
+    .nav-links { display: flex; gap: 26px; list-style: none; align-items: center; }
+    .nav-link {
+      position: relative; text-decoration: none;
+      font-size: .72rem; font-weight: 500;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 0; white-space: nowrap;
+      transition: color .35s var(--ease), text-shadow .35s var(--ease);
+    }
+    .nav-link::after {
+      content: ''; position: absolute; left: 0; bottom: 0;
+      height: 1px; width: 0; background: #fff;
+      transition: width .45s var(--ease);
+    }
+    .nav-link:hover { color: #fff; text-shadow: 0 0 14px rgba(255,255,255,.7); }
+    .nav-link:hover::after, .nav-link.is-active::after { width: 100%; }
+    .nav-link.is-active { color: #fff; }
+    .nav-link:focus-visible { outline: 1px solid #fff; outline-offset: 4px; border-radius: 4px; }
+
+    main { position: relative; z-index: 5; }
+
+    /* one page at a time */
+    .section { display: none; }
+    .section.is-active { display: block; animation: sectionIn .65s var(--ease) both; }
+    @keyframes sectionIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+
+    .section-head {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      padding: 0 24px; margin-bottom: 44px; text-align: center;
+    }
+    .kicker { font-size: .66rem; letter-spacing: .42em; text-transform: uppercase; color: var(--faint); }
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.7rem, 5vw, 3.1rem);
+      font-weight: 800; letter-spacing: .1em; text-transform: uppercase; line-height: 1.05;
+      background: linear-gradient(100deg, #fff 0%, #7a7a7a 35%, #fff 55%, #7a7a7a 100%);
+      background-size: 250% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: shimmer 9s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: -250% 0; } }
+
+    #home, #info, #song, #poem { padding: calc(var(--nav-h) + 60px) 0 40px; }
+    #info, #song { max-width: 860px; margin: 0 auto; padding-left: 20px; padding-right: 20px; }
+    #poem { padding-bottom: 90px; }
+
+    .home-wrap {
+      max-width: 840px; margin: 0 auto; padding: 0 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 52px;
+    }
+
+    .monogram { width: clamp(150px, 24vw, 210px); aspect-ratio: 1; perspective: 1000px; }
+    .monogram .ring {
+      position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+      display: grid; place-items: center;
+      font-family: 'Orbitron', sans-serif; font-weight: 800;
+      font-size: clamp(2.6rem, 8vw, 3.8rem); letter-spacing: .08em;
+      color: #fff;
+      border: 1px solid var(--line-strong);
+      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.14), rgba(255,255,255,.02) 65%);
+      box-shadow: 0 0 60px rgba(255,255,255,.1), inset 0 1px 0 rgba(255,255,255,.18);
+      animation: spinY 12s linear infinite;
+      transition: box-shadow .5s var(--ease), border-color .5s var(--ease);
+    }
+    .monogram .ring:hover { border-color: rgba(255,255,255,.7); box-shadow: 0 0 90px rgba(255,255,255,.22), inset 0 1px 0 rgba(255,255,255,.18); }
+    .monogram .ring img {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    }
+    @keyframes spinY { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+
+    .intro { text-align: center; max-width: 620px; }
+    .intro h3 {
+      font-family: 'Playfair Display', serif; font-style: italic; font-weight: 400;
+      font-size: clamp(1.4rem, 4vw, 2rem); color: #fff; margin-bottom: 12px;
+    }
+    .intro p { color: rgba(255,255,255,.75); font-size: .92rem; line-height: 1.9; }
+
+    .block {
+      width: 100%; padding: 28px 30px; border-radius: var(--r);
+      background: var(--glass); border: 1px solid var(--line);
+      transition: border-color .4s var(--ease);
+    }
+    .block:hover { border-color: var(--line-strong); }
+    .block .kicker { display: block; text-align: center; margin-bottom: 18px; }
+
+    .skills { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .skills li {
+      padding: 8px 18px; border-radius: 999px;
+      font-size: .74rem; letter-spacing: .14em; text-transform: uppercase;
+      color: rgba(255,255,255,.85);
+      border: 1px solid var(--line); background: rgba(255,255,255,.04);
+      transition: all .4s var(--ease);
+    }
+    .skills li:hover { background: #fff; color: #000; box-shadow: 0 0 30px rgba(255,255,255,.3); transform: translateY(-3px); }
+
+    .bio {
+      width: 100%;
+      font-size: .92rem; line-height: 2;
+      color: rgba(255,255,255,.82);
+      border-left: 2px solid rgba(255,255,255,.22);
+      padding-left: 26px;
+      min-height: 150px;
+      white-space: pre-wrap;
+      border-right: 2px solid transparent;
+    }
+    .bio.is-typing { border-right-color: rgba(255,255,255,.4); animation: caret .8s step-end infinite; }
+    @keyframes caret { 50% { border-right-color: transparent; } }
+
+    .act-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+    .act-links a {
+      display: block; text-align: center; text-decoration: none;
+      padding: 18px 14px; border-radius: 18px;
+      color: #fff; font-size: .74rem; letter-spacing: .16em; text-transform: uppercase;
+      border: 1px solid var(--line); background: rgba(255,255,255,.03);
+      transition: all .45s var(--ease);
+    }
+    .act-links a small {
+      display: block; font-size: .6rem; letter-spacing: .34em; color: var(--faint); margin-bottom: 4px;
+    }
+    .act-links a:hover { background: #fff; color: #000; transform: translateY(-5px); box-shadow: 0 0 40px rgba(255,255,255,.25); }
+    .act-links a:hover small { color: rgba(0,0,0,.5); }
+    .act-links a.is-current { background: rgba(255,255,255,.1); border-color: var(--line-strong); }
+    .act-links a.is-current:hover { background: #fff; }
+    .explore { position: relative; z-index: 5; max-width: 840px; margin: 30px auto 0; padding: 0 24px; }
+    .act-links a:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+
+
+
+    /* ---------- I Am a Poem : tall expanding cards ---------- */
+    .hf-row { display: flex; gap: 14px; justify-content: center; align-items: stretch; padding: 0 24px; }
+    .hcard {
+      position: relative; width: 86px; height: clamp(340px, 56vh, 490px);
+      flex: 0 0 auto; border-radius: 24px; overflow: hidden;
+      background: rgba(255,255,255,.03); border: 1px solid var(--line);
+      cursor: pointer; outline: none;
+      transition: width .68s var(--ease), border-color .45s var(--ease), box-shadow .55s var(--ease);
+    }
+    .hf-row:hover .hcard { width: 70px; }
+    .hf-row .hcard:hover, .hf-row .hcard:focus-visible, .hf-row .hcard.is-open {
+      width: 340px; border-color: var(--line-strong);
+      box-shadow: 0 34px 80px -24px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .hcard-media { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: linear-gradient(160deg, #2a2f34, #0b0c0e); }
+    .hcard-media img {
+      width: 100%; height: 100%; object-fit: cover;
+      filter: grayscale(.45) brightness(.5);
+      transition: filter .7s var(--ease), transform .9s var(--ease);
+    }
+    .hcard:hover .hcard-media img, .hcard:focus-visible .hcard-media img, .hcard.is-open .hcard-media img {
+      filter: grayscale(0) brightness(.45); transform: scale(1.08);
+    }
+    .hcard-media::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,.2) 0%, rgba(0,0,0,.55) 45%, rgba(0,0,0,.9) 100%);
+    }
+    .hcard-rail {
+      position: absolute; inset: 0; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      padding: 18px 0 22px; transition: opacity .3s var(--ease);
+    }
+    .hcard:hover .hcard-rail, .hcard:focus-visible .hcard-rail, .hcard.is-open .hcard-rail { opacity: 0; }
+    .rail-letter {
+      width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%;
+      display: grid; place-items: center;
+      font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 1.05rem;
+      color: #fff; background: #141414; border: 1.5px solid rgba(255,255,255,.35);
+    }
+    .rail-name {
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      font-size: .7rem; letter-spacing: .3em; text-transform: uppercase;
+      color: rgba(255,255,255,.78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-height: calc(100% - 90px);
+    }
+    .hcard-body {
+      position: absolute; top: 0; left: 0; width: 340px; height: 100%; z-index: 3;
+      padding: 26px 24px; display: flex; flex-direction: column; gap: 16px;
+      opacity: 0; transform: translateX(16px); pointer-events: none;
+      transition: opacity .35s ease .09s, transform .55s var(--ease) .09s;
+    }
+    .hcard:hover .hcard-body, .hcard:focus-visible .hcard-body, .hcard.is-open .hcard-body { opacity: 1; transform: none; pointer-events: auto; }
+    .hcard-head { display: flex; align-items: center; gap: 14px; }
+    .big-letter {
+      width: 64px; height: 64px; flex: 0 0 auto; border-radius: 50%;
+      display: grid; place-items: center;
+      font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 1.6rem; color: #fff;
+      background: #141414; border: 2px solid rgba(255,255,255,.28);
+    }
+    .display-name {
+      font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 700; letter-spacing: .06em;
+      text-shadow: 0 2px 18px rgba(0,0,0,.9);
+    }
+    .username { font-size: .74rem; color: var(--muted); }
+    .poem-rest {
+      margin-top: auto; padding: 14px 16px; border-radius: 14px;
+      font-size: .9rem; line-height: 1.7; color: rgba(255,255,255,.9);
+      background: var(--glass); border: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .poem-rest span { display: block; font-size: 1.5rem; margin-bottom: 4px; }
+
+    @media (max-width: 980px) {
+      .hf-row { flex-wrap: wrap; gap: 14px; }
+      .hf-row:hover .hcard, .hcard { width: min(100%, 360px); height: auto; }
+      .hcard-rail { display: none; }
+      .hcard-body { position: relative; width: 100%; height: auto; opacity: 1; transform: none; pointer-events: auto; padding: 26px 22px; min-height: 300px; }
+      .hcard:hover .hcard-media img { transform: scale(1.04); }
+    }
+
+    footer {
+      position: relative; z-index: 5; text-align: center; padding: 28px 16px;
+      font-size: .66rem; letter-spacing: .3em; text-transform: uppercase; color: var(--faint);
+    }
+
+    @media (max-width: 760px) {
+      :root { --nav-h: 70px; }
+      .nav { padding: 11px 18px; border-radius: 22px; gap: 12px; }
+      .nav.is-scrolled { padding: 8px 18px; }
+      .nav-links { gap: 16px; }
+      .nav-link { font-size: .62rem; letter-spacing: .12em; }
+      .brand { font-size: 1rem; letter-spacing: .2em; }
+      .bio { padding-left: 18px; font-size: .85rem; }
+    }
+
+    @media (max-width: 560px) {
+      .nav { flex-direction: column; border-radius: 20px; padding: 12px 16px; }
+      .nav-links { gap: 14px; flex-wrap: wrap; justify-content: center; }
+      #home, #info, #song, #poem { padding-top: 190px; }
+      .card { padding: 22px; }
+      .student-info { grid-template-columns: 1fr; }
+      .student-info > div { border-bottom: 0; padding: 2px 0; }
+      .label { margin-top: 14px; }
+      .lyrics { padding: 20px; font-size: .88rem; }
+    }
+
+
+    /* glass card */
+.card{
+  background:var(--glass);border:1px solid var(--line);border-radius:var(--r);
+  padding:34px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 34px 80px -34px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.student-info{display:grid;grid-template-columns:190px 1fr;gap:0;font-size:.95rem;}
+.student-info > div{padding:15px 0;border-bottom:1px solid var(--line);}
+.student-info > div:nth-last-child(-n+2){border-bottom:0;}
+.label{font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);align-self:center;}
+.student-info b{font-weight:600;color:#fff;}
+
+/* song */
+.song-title{
+  text-align:center;font-family:'Orbitron',sans-serif;font-weight:800;
+  font-size:clamp(1.6rem,5vw,2.6rem);letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:6px;
+}
+.song-title u,.lyrics u{text-decoration-color:rgba(255,255,255,.35);text-underline-offset:5px;text-decoration-thickness:1px;}
+.artist{text-align:center;font-weight:400;font-size:.85rem;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:32px;}
+.lyrics{
+  background:var(--glass-2);border:1px solid var(--line);border-radius:18px;
+  padding:30px;line-height:1.9;font-size:.95rem;color:rgba(255,255,255,.88);
+}
+.lyrics h3{
+  font-size:.66rem;letter-spacing:.4em;text-transform:uppercase;
+  color:var(--faint);font-weight:500;margin-bottom:8px;
+}
+.lyrics h3 b{font-weight:500;}
+.lyrics p{margin-bottom:28px;}
+.chorus{
+  background:rgba(255,255,255,.06);border:1px solid var(--line-strong);
+  padding:22px 24px 4px;margin:8px 0 28px;border-radius:16px;
+  box-shadow:0 0 40px -20px rgba(255,255,255,.25);
+}
+.chorus h3{color:var(--muted);}
+.chorus p{color:#fff;}
+
+    /* ---------- opening splash ---------- */
+    #splash {
+      position: fixed; inset: 0; z-index: 1000;
+      display: grid; place-items: center;
+      background: #000;
+      transition: opacity .9s var(--ease), visibility .9s;
+    }
+    #splash.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .splash-inner {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 26px; padding: 32px; text-align: center; max-width: 660px; width: 100%;
+    }
+    .splash-type {
+      font-family: 'Orbitron', sans-serif; font-weight: 700;
+      font-size: clamp(1.4rem, 5vw, 2.4rem); letter-spacing: .18em; text-transform: uppercase;
+      min-height: 1.6em; color: #fff;
+      border-right: 2px solid transparent; padding-right: 6px;
+      text-shadow: 0 0 40px rgba(255,255,255,.25);
+    }
+    .splash-type.is-typing { border-right-color: #fff; animation: caret .8s step-end infinite; }
+    @keyframes caret { 50% { border-right-color: transparent; } }
+    .splash-btn {
+      font: inherit; font-size: .72rem; font-weight: 600;
+      letter-spacing: .3em; text-transform: uppercase;
+      padding: 17px 46px; background: transparent; color: #fff;
+      border: 1px solid var(--line-strong); border-radius: 999px;
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: background .45s var(--ease), color .45s var(--ease), box-shadow .45s var(--ease), transform .45s var(--ease);
+    }
+    .splash-btn:disabled { opacity: .22; cursor: not-allowed; }
+    .splash-btn:not(:disabled):hover {
+      background: #fff; color: #000;
+      box-shadow: 0 0 50px rgba(255,255,255,.35); transform: translateY(-3px);
+    }
+    .splash-btn:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+    .splash-credit { font-size: .72rem; letter-spacing: .16em; color: var(--faint); font-style: italic; }
+    body.splash-open { overflow: hidden; }
+
+
+    /* ---------- music toggle ---------- */
+    .music-btn {
+      position: fixed; right: 18px; bottom: 18px; z-index: 200;
+      width: 46px; height: 46px; border-radius: 50%;
+      display: none; place-items: center; cursor: pointer;
+      font-size: 1.1rem; color: #fff;
+      background: rgba(8,8,8,.55); border: 1px solid var(--line-strong);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      transition: background .4s var(--ease), box-shadow .4s var(--ease), transform .4s var(--ease);
+    }
+    .music-btn.is-visible { display: grid; }
+    .music-btn:hover { background: rgba(255,255,255,.15); box-shadow: 0 0 30px rgba(255,255,255,.25); transform: translateY(-2px); }
+    .music-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* ---------- mobile fixes (kept last so they win) ---------- */
+    @media (max-width: 560px) {
+      #info, #song { padding-left: 12px; padding-right: 12px; }
+      .explore { padding: 0 12px; }
+      .card { padding: 20px 16px; }
+      .student-info { grid-template-columns: 1fr; }
+      .student-info > div { border-bottom: 0; padding: 2px 0; }
+      .student-info > div:nth-child(even) { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+      .student-info > div:last-child { border-bottom: 0; }
+      .label { margin-top: 10px; }
+      .song-title { font-size: 1.5rem; }
+      .lyrics { padding: 16px 14px; font-size: .84rem; line-height: 1.8; }
+      .chorus { padding: 16px 14px 2px; }
+      .lyrics p { margin-bottom: 22px; }
+    }
+  </style>
+</head>
+
+<body class="splash-open">
+  <div class="grain" aria-hidden="true"></div>
+
+  <audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+  <button class="music-btn js-music" aria-label="Mute or unmute music" title="Music on/off">🔊</button>
+
+  <div id="splash">
+    <div class="splash-inner">
+      <p class="splash-type js-splash-type"></p>
+      <button class="splash-btn js-splash-btn" disabled>Click to proceed</button>
+      <p class="splash-credit">developed by Zoid</p>
+    </div>
+  </div>
+
+
+  <header class="nav" id="nav">
+    <a class="brand" href="#home" data-target="home" title="Back to Homepage">ZOID</a>
+    <nav aria-label="Primary">
+      <ul class="nav-links">
+        <li><a href="#home" class="nav-link is-active" data-target="home" title="Open Homepage">Homepage</a></li>
+        <li><a href="#info" class="nav-link" data-target="info" title="Open Student Info">Student Info</a></li>
+        <li><a href="#song" class="nav-link" data-target="song" title="Open Song Lyrics">Song Lyrics</a></li>
+        <li><a href="#poem" class="nav-link" data-target="poem" title="Open I Am a Poem">I Am a Poem</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+
+    <section id="info" class="section">
+        <div class="section-head">
+            <span class="kicker">Part 1</span>
+            <h1 class="section-title">My Personal Webpage</h1>
+            <p class="kicker" style="letter-spacing:.2em">My Information and Favorite Song</p>
+        </div>
+
+        <div class="card">
+            <div class="student-info">
+                <div class="label">Full Name</div>
+                <div><b>Zoid</b></div>
+
+                <div class="label">Student No.</div>
+                <div>Hidden</div>
+
+                <div class="label">Year &amp; Section</div>
+                <div>Hidden</div>
+
+                <div class="label">Age</div>
+                <div>Hidden</div>
+
+                <div class="label">Gender</div>
+                <div>Male</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="song" class="section">
+        <div class="section-head">
+            <span class="kicker">Part 2</span>
+            <h1 class="section-title" style="font-size:clamp(1.3rem,4vw,2rem)">Song Lyrics</h1>
+        </div>
+
+        <div class="card">
+            <h2 class="song-title"><u>Huling El Bimbo</u></h2>
+            <h3 class="artist"><i>Eraserheads</i></h3>
+
+            <div class="lyrics">
+
+                <h3><b>Verse 1</b></h3>
+
+                <p>
+                    <u>
+                        Kamukha mo si Paraluman<br>
+                        Nung tayo ay bata pa<br>
+                        At ang galing-galing mong sumayaw<br>
+                        Mapa-boogie man o cha-cha<br>
+                        Ngunit ang paborito<br>
+                        Ay pagsayaw mo nang El Bimbo<br>
+                        Nakakaindak, nakakaaliw<br>
+                        Nakakatindig balahibo
+                    </u>
+                </p>
+
+                <h3><b>Pre-Chorus</b></h3>
+
+                <p>
+                    <u>
+                        Pagkaggaling sa eskwela ay dideretso na sa inyo<br>
+                        At buong maghapon ay tinuturuan mo ako
+                    </u>                    
+                </p>
+
+                <div class="chorus">
+
+                    <h3><b>Chorus</b></h3>
+
+                    <p>
+                        <u>
+                            Magkahawak ang ating kamay<br>
+                            At walang kamalay-malay<br>
+                            Na tinuruan mo ang puso ko<br>
+                            Na umibig ng tunay
+                        </u>
+
+                    </p>
+
+                </div>
+
+                <h3><b>Verse 2</b></h3>
+
+                <p>
+                    <u>
+                        Naninigas ang aking katawan<br>
+                        'Pag umikot na ang plaka<br>
+                        Patay sa kembot ng beywang mo<br>
+                        At pungay ng 'yong mga mata<br>
+                        Lumiliwanag ang buhay<br>
+                        Habang tayo'y magkaakbay<br>
+                        At dahan-dahang dumudulas ang kamay ko<br>
+                        Sa makinis mong braso, ooh
+                    </u>
+                </p>
+
+                <h3><b>Pre-Chorus 2</b></h3>
+
+                <p>
+                    <u>
+                        Sana noon pa man ay sinabi na sa iyo<br>
+                        Kahit hindi na uso ay ito lang ang alam ko
+                    </u>
+                </p>
+
+                <div class="chorus">
+
+                    <h3><b>Chorus 2</b></h3>
+
+                    <p>
+                        <u>
+                            Magkahawak ang ating kamay<br>
+                            At walang kamalay-malay<br>
+                            Na tinuruan mo ang puso ko<br>
+                            Na umibig ng tunay
+                        </u>
+                    </p>
+
+                </div>
+
+                <h3><b>Interlude</b></h3>
+
+                <p>
+                    <u>La-la-la-la, la-la, la-la, la-la-la</u>
+                </p>
+
+                <h3><b>Verse 3</b></h3>
+
+                <p>
+                    <u>
+                        Lumipas ang maraming taon<br>
+                        'Di na tayo nagkita<br>
+                        Balita ko'y may anak ka na<br>
+                        Ngunit walang asawa<br>
+                        Tagahugas ka raw ng pinggan sa may Ermita<br>
+                        At isang gabi, nasagasaan<br>
+                        Sa isang madilim na eskenita
+                    </u>
+                </p>
+
+                <h3><b>Pre-Chorus 3</b></h3>
+
+                <p>
+                    <u>
+                        Lahat ng pangarap ko'y bigla lang natunaw<br>
+                        Sa panaginip na lang pala kita maisasayaw
+                    </u>
+                </p>
+
+
+                <div class="chorus">
+
+                    <h3><b>Final Chorus</b></h3>
+
+                    <p>
+                        <u>
+                            Magkahawak ang ating kamay<br>
+                            At walang kamalay-malay<br>
+                            Na tinuruan mo ang puso ko<br>
+                            Na umibig ng tunay<br>
+                            Magkahawak ang ating kamay<br>
+                            At walang kamalay-malay<br>
+                            Na tinuruan mo ang puso ko<br>
+                            Na umibig ng tunay
+                        </u>
+                    </p>
+
+                </div>
+
+                <h3><b>Outro</b></h3>
+
+                <p>
+                    <u>
+                        La-la-la-la, la-la, la-la, la-la-la<br>
+                        La-la-la-la, la-la, la-la, la-la-la
+                    </u>
+                </p>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="home" class="section is-active">
+      <div class="section-head">
+        <span class="kicker">Personal Home Page</span>
+        <h2 class="section-title">Zoid On Top</h2>
+      </div>
+
+      <div class="home-wrap">
+        <div class="monogram">
+          <div class="ring">
+            <span>Z</span>
+            <img src="images/icon.png" alt="Profile picture of Zoid" width="210" referrerpolicy="no-referrer" onerror="this.remove()">
+          </div>
+        </div>
+
+        <div class="intro">
+          <h3>Hello, I am Zoid.</h3>
+          <p>Welcome to my personal home page. I am a student who enjoys music, design, and building websites one tag at a time.</p>
+        </div>
+
+        <div class="block">
+          <span class="kicker">Skills</span>
+          <ul class="skills">
+            <li>HTML</li>
+            <li>CSS</li>
+            <li>JavaScript</li>
+            <li>Web Design</li>
+            <li>Multimedia</li>
+            <li>Python</li>
+            <li>Lua</li>
+          </ul>
+        </div>
+
+        <div class="block">
+          <span class="kicker">About Me</span>
+          <p class="bio js-bio"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="poem" class="section">
+      <div class="section-head">
+        <span class="kicker">C &middot; L &middot; I &middot; V &middot; E &middot; N</span>
+        <h2 class="section-title">I Am a Poem</h2>
+      </div>
+      <div class="hf-row js-poem-row"></div>
+    </section>
+
+  </main>
+
+  <div class="explore">
+    <div class="block">
+      <span class="kicker">Explore</span>
+      <div class="act-links">
+        <a href="#home" data-target="home" title="Open Homepage">Homepage</a>
+        <a href="#info" data-target="info" title="Open Student Info">Student Info</a>
+        <a href="#song" data-target="song" title="Open Song Lyrics">Song Lyrics</a>
+        <a href="#poem" data-target="poem" title="Open I Am a Poem">I Am a Poem</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>Zoid &middot; Introduction to Computing</footer>
+
+  <script>
+    const $  = (s, c = document) => c.querySelector(s);
+    const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const POEM = [
+      { letter: 'C', word: 'Creative',    rest: 'in everything I build',   image: 'images/creative.jfif',   icon: '🎨' },
+      { letter: 'L', word: 'Learning',    rest: 'something new every day', image: 'images/LEARNING.png',    icon: '📚' },
+      { letter: 'I', word: 'Imagination', rest: 'that fuels my ideas',     image: 'images/imagination.jfif', icon: '💡' },
+      { letter: 'V', word: 'Valuing',     rest: 'hard work and honesty',   image: 'images/valuing.jfif',    icon: '🏆' },
+      { letter: 'E', word: 'Eager',       rest: 'to grow as a developer',  image: 'images/eager.jfif',      icon: '🚀' },
+      { letter: 'N', word: 'Never',       rest: 'giving up on my goals',   image: 'images/goal.png',        icon: '🎯' }
+    ];
+
+    const ABOUT_TEXT =
+`I am Zoid, a BS Computer Science student.
+
+I love listening to music, exploring new tools, and turning ideas into clean, creative webpages. Outside of class, I enjoy building Roblox games, writing Python automation scripts, and experimenting with exploit scripts.
+
+I am also interested in studying artificial intelligence, and I am always looking for new things to learn and new projects to build.`;
+
+    function typeWriter(el, text, speed = 18) {
+      return new Promise(resolve => {
+        if (!el) return resolve();
+        if (reduceMotion) { el.textContent = text; return resolve(); }
+        el.textContent = '';
+        el.classList.add('is-typing');
+        let i = 0;
+        (function step() {
+          if (i < text.length) {
+            el.textContent += text.charAt(i++);
+            setTimeout(step, speed);
+          } else {
+            el.classList.remove('is-typing');
+            resolve();
+          }
+        })();
+      });
+    }
+
+    (function buildPoem() {
+      const row = $('.js-poem-row');
+      const frag = document.createDocumentFragment();
+
+      POEM.forEach(p => {
+        const card = document.createElement('article');
+        card.className = 'hcard';
+        card.tabIndex = 0;
+        card.setAttribute('aria-label', p.letter + ' - ' + p.word + ' ' + p.rest);
+        card.innerHTML = `
+          <div class="hcard-media"><img src="${p.image}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></div>
+
+          <div class="hcard-rail">
+            <div class="rail-letter">${p.letter}</div>
+            <span class="rail-name">${p.word} ${p.rest}</span>
+          </div>
+
+          <div class="hcard-body">
+            <div class="hcard-head">
+              <div class="big-letter">${p.letter}</div>
+              <div>
+                <div class="display-name">${p.word}</div>
+                <div class="username">C &middot; L &middot; I &middot; V &middot; E &middot; N</div>
+              </div>
+            </div>
+            <div class="poem-rest"><span>${p.icon}</span><b>${p.word}</b> ${p.rest}</div>
+          </div>`;
+
+        /* tap-to-open on touch screens */
+        card.addEventListener('click', () => {
+          if (window.matchMedia('(hover: none)').matches) {
+            $$('.hcard.is-open').forEach(c => c !== card && c.classList.remove('is-open'));
+            card.classList.toggle('is-open');
+          }
+        });
+        frag.appendChild(card);
+      });
+
+      row.appendChild(frag);
+    })();
+
+    (function initSplash() {
+      const splash   = document.getElementById('splash');
+      const typeEl   = document.querySelector('.js-splash-type');
+      const btn      = document.querySelector('.js-splash-btn');
+      const bgm      = document.getElementById('bgm');
+      const musicBtn = document.querySelector('.js-music');
+      const store = {
+        get(k){ try { return sessionStorage.getItem(k); } catch(e){ return null; } },
+        set(k,v){ try { sessionStorage.setItem(k,v); } catch(e){} }
+      };
+
+      typeWriter(typeEl, 'Zoid On Top', 70).then(() => {
+        btn.disabled = false;
+        btn.focus({ preventScroll: true });
+      });
+
+      /* remember where the song is so it carries over to the next page */
+      bgm.addEventListener('timeupdate', () => store.set('bgmTime', bgm.currentTime));
+      window.addEventListener('pagehide', () => store.set('bgmTime', bgm.currentTime));
+
+      function startMusic() {
+        bgm.volume = 0.6;
+        musicBtn.classList.add('is-visible');
+        if (store.get('bgmMuted') === '1') { musicBtn.textContent = '\ud83d\udd07'; return; }
+        const go = () => {
+          const t = parseFloat(store.get('bgmTime')) || 0;
+          try { if (t > 0 && isFinite(bgm.duration) && t < bgm.duration) bgm.currentTime = t; } catch(e){}
+          bgm.play().then(() => { musicBtn.textContent = '\ud83d\udd0a'; })
+                    .catch(() => { musicBtn.classList.remove('is-visible'); });
+        };
+        if (bgm.readyState >= 1) go(); else bgm.addEventListener('loadedmetadata', go, { once: true });
+      }
+
+      musicBtn.addEventListener('click', () => {
+        if (bgm.paused) { bgm.play(); musicBtn.textContent = '\ud83d\udd0a'; store.set('bgmMuted','0'); }
+        else            { bgm.pause(); musicBtn.textContent = '\ud83d\udd07'; store.set('bgmMuted','1'); }
+      });
+
+      btn.addEventListener('click', () => {
+        splash.classList.add('is-hidden');
+        document.body.classList.remove('splash-open');
+        startMusic();
+        typeWriter(document.querySelector('.js-bio'), ABOUT_TEXT, 18);
+      });
+    })();
+
+    (function initPage() {
+      const nav   = $('#nav');
+      const links = $$('.nav-link[data-target]');
+      const IDS   = ['info', 'song', 'home', 'poem'];
+
+      function goTo(id) {
+        if (!IDS.includes(id)) id = 'home';
+        $$('.section').forEach(sec => sec.classList.toggle('is-active', sec.id === id));
+        links.forEach(l => l.classList.toggle('is-active', l.dataset.target === id));
+        $$('.act-links a').forEach(a => a.classList.toggle('is-current', a.dataset.target === id));
+        window.scrollTo(0, 0);
+        if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
+      }
+
+      $$('[data-target]').forEach(el => {
+        el.addEventListener('click', e => {
+          e.preventDefault();
+          goTo(el.dataset.target);
+        });
+      });
+
+      window.addEventListener('hashchange', () => goTo(location.hash.slice(1)));
+      goTo(location.hash.slice(1));
+
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          nav.classList.toggle('is-scrolled', window.scrollY > 24);
+          ticking = false;
+        });
+      }, { passive: true });
+    })();
+  </script>
+</body>
+</html>
